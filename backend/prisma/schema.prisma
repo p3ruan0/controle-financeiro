@@ -1,0 +1,208 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Company {
+  id            String       @id @default(uuid())
+  name          String
+  cnpj          String?
+  contactName   String?
+  email         String?
+  phone         String?
+  status        String       @default("ATIVO") // 'ATIVO' | 'BLOQUEADO'
+  blockedAt     DateTime?
+  blockedReason String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  users         User[]
+  invitations   Invitation[]
+  auditLogs     AuditLog[]
+}
+
+model User {
+  id                   String             @id @default(uuid())
+  name                 String
+  email                String             @unique
+  password             String
+  role                 String             @default("CLIENT_ADMIN") // 'SUPER_ADMIN' | 'ADMIN' | 'CLIENT_ADMIN' | 'USER'
+  status               String             @default("ATIVO")        // 'ATIVO' | 'BLOQUEADO' | 'PENDENTE' | 'EXCLUIDO'
+  
+  companyId            String?
+  company              Company?           @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
+  // Tracking & Metrics
+  firstLoginAt         DateTime?
+  lastLoginAt          DateTime?
+  lastLoginIp          String?
+  lastLoginDevice      String?
+  lastLoginBrowser     String?
+  loginCount           Int                @default(0)
+  failedLoginAttempts  Int                @default(0)
+  lastPasswordChangeAt DateTime?
+
+  // Block & Soft Delete
+  blockedAt            DateTime?
+  blockedReason        String?
+  blockedByUserId      String?
+  deletedAt            DateTime?          // Soft delete
+
+  resetToken           String?
+  resetTokenExpiry     DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  // Financial relationships
+  categories           Category[]
+  transactions         Transaction[]
+  recurringExpenses    RecurringExpense[]
+  receivables          ReceivableAccount[]
+
+  // Security relationships
+  sessions             UserSession[]
+  loginHistories       LoginHistory[]
+  auditLogsAdmin       AuditLog[]         @relation("AdminAuditLogs")
+  auditLogsTarget      AuditLog[]         @relation("TargetUserAuditLogs")
+  invitationsCreated   Invitation[]       @relation("AdminInvitations")
+}
+
+model UserSession {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token          String    @unique
+  ipAddress      String?
+  userAgent      String?
+  device         String?
+  browser        String?
+  isActive       Boolean   @default(true)
+  lastActivityAt DateTime  @default(now())
+  expiresAt      DateTime
+  createdAt      DateTime  @default(now())
+}
+
+model LoginHistory {
+  id            String    @id @default(uuid())
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email         String
+  status        String    // 'SUCCESS' | 'FAILED' | 'BLOCKED'
+  ipAddress     String?
+  userAgent     String?
+  device        String?
+  browser       String?
+  failureReason String?
+  createdAt     DateTime  @default(now())
+}
+
+model AuditLog {
+  id           String    @id @default(uuid())
+  adminUserId  String?
+  adminUser    User?     @relation("AdminAuditLogs", fields: [adminUserId], references: [id], onDelete: SetNull)
+  targetUserId String?
+  targetUser   User?     @relation("TargetUserAuditLogs", fields: [targetUserId], references: [id], onDelete: SetNull)
+  companyId    String?
+  company      Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  action       String    // 'CRIOU_USUARIO' | 'EDITOU_USUARIO' | 'BLOQUEOU_USUARIO' | 'DESBLOQUEOU_USUARIO' | 'EXCLUIU_USUARIO' | 'REDEFINIU_SENHA' | 'CRIOU_CLIENTE' | 'EDITOU_CLIENTE' | 'BLOQUEOU_CLIENTE' | 'REATIVOU_CLIENTE' | 'ENCERROU_SESSAO' | 'ENVIOU_CONVITE' | 'CANCELOU_CONVITE'
+  description  String
+  metadata     String?   // JSON format string
+  ipAddress    String?
+  createdAt    DateTime  @default(now())
+}
+
+model Invitation {
+  id          String    @id @default(uuid())
+  email       String
+  name        String
+  role        String    @default("USER")
+  companyId   String?
+  company     Company?  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  token       String    @unique
+  status      String    @default("PENDENTE") // 'PENDENTE' | 'ACEITO' | 'EXPIRADO' | 'CANCELADO'
+  expiresAt   DateTime
+  createdById String?
+  createdBy   User?     @relation("AdminInvitations", fields: [createdById], references: [id], onDelete: SetNull)
+  acceptedAt  DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model Category {
+  id                String             @id @default(uuid())
+  userId            String?
+  user              User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  type              String             // 'ENTRADA' | 'SAIDA'
+  color             String             @default("#64748b")
+  icon              String             @default("Tag")
+  isDefault         Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+
+  transactions      Transaction[]
+  recurringExpenses RecurringExpense[]
+  receivables       ReceivableAccount[]
+}
+
+model Transaction {
+  id                 String            @id @default(uuid())
+  userId             String
+  user               User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId         String?
+  category           Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  type               String            // 'ENTRADA' | 'SAIDA'
+  description        String
+  amount             Float
+  date               DateTime          // Data da transação
+  dueDate            DateTime?         // Data de vencimento
+  paymentDate        DateTime?         // Data do pagamento / recebimento
+  status             String            // 'PAGO' | 'RECEBIDO' | 'PENDENTE' | 'VENCIDO' | 'ATRASADO' | 'CANCELADO'
+  paymentMethod      String            @default("OUTRO") // 'DINHEIRO' | 'PIX' | 'CARTAO_CREDITO' | 'CARTAO_DEBITO' | 'BOLETO' | 'TRANSFERENCIA' | 'OUTRO'
+  isFixed            Boolean           @default(false)   // Gasto fixo ou variável
+  subCategory        String?
+  notes              String?
+  recurringExpenseId String?
+  recurringExpense   RecurringExpense? @relation(fields: [recurringExpenseId], references: [id], onDelete: SetNull)
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+}
+
+model RecurringExpense {
+  id           String        @id @default(uuid())
+  userId       String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId   String?
+  category     Category?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  name         String
+  amount       Float
+  dueDay       Int           // Dia do vencimento (1 a 31)
+  paymentMethod String       @default("BOLETO")
+  recurrence   String        @default("MENSAL") // 'MENSAL' | 'SEMANAL' | 'ANUAL'
+  isActive     Boolean       @default(true)
+  autoGenerate Boolean       @default(true)
+  notes        String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  transactions Transaction[]
+}
+
+model ReceivableAccount {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId   String?
+  category     Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  debtorName   String    // Pessoa ou empresa devedora
+  description  String
+  amount       Float
+  expectedDate DateTime  // Data prevista para receber
+  receivedDate DateTime? // Data em que o valor foi recebido
+  status       String    @default("A_RECEBER") // 'A_RECEBER' | 'RECEBIDO' | 'ATRASADO' | 'CANCELADO'
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
