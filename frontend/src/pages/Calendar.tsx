@@ -13,6 +13,7 @@ import {
 import { api } from '../services/api';
 import { CalendarEvent } from '../types';
 import { formatCurrency, formatDate, getPaymentMethodName, getStatusDetails } from '../utils/formatters';
+import { useDataSync } from '../hooks/useDataSync';
 
 export const Calendar: React.FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -43,6 +44,11 @@ export const Calendar: React.FC = () => {
   useEffect(() => {
     fetchCalendarEvents();
   }, [month, year]);
+
+  // Reactively re-fetch calendar events when financial data changes
+  useDataSync(['calendar', 'all'], () => {
+    fetchCalendarEvents();
+  });
 
   const handlePrevMonth = () => {
     setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));

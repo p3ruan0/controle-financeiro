@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { Category, Transaction, TransactionType } from '../types';
 import { formatInputDate } from '../utils/formatters';
+import { useCategories } from '../contexts/CategoriesContext';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -9,7 +10,7 @@ interface TransactionModalProps {
   onSave: (transactionData: any) => Promise<void>;
   transaction?: Transaction | null;
   initialType?: TransactionType;
-  categories: Category[];
+  categories?: Category[];
 }
 
 export const TransactionModal: React.FC<TransactionModalProps> = ({
@@ -18,8 +19,10 @@ export const TransactionModal: React.FC<TransactionModalProps> = ({
   onSave,
   transaction,
   initialType = 'SAIDA',
-  categories,
+  categories: propCategories,
 }) => {
+  const { categories: contextCategories } = useCategories();
+  const categories = propCategories && propCategories.length > 0 ? propCategories : contextCategories;
   const [type, setType] = useState<TransactionType>(initialType);
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');

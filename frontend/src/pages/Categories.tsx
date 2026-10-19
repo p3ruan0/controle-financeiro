@@ -1,47 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Plus, Tags, Trash2, Edit2, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
-import { api } from '../services/api';
 import { Category } from '../types';
 import { CategoryModal } from '../components/CategoryModal';
+import { useCategories } from '../contexts/CategoriesContext';
 
 export const Categories: React.FC = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { categories, isLoading, createCategory, updateCategory, deleteCategory } = useCategories();
   const [activeTab, setActiveTab] = useState<'TODAS' | 'ENTRADA' | 'SAIDA'>('TODAS');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
 
-  const fetchCategories = async () => {
-    try {
-      setIsLoading(true);
-      const res = await api.get<{ categories: Category[] }>('/categories');
-      setCategories(res.categories);
-    } catch (err) {
-      console.error('Erro ao carregar categorias:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
   const handleSaveCategory = async (data: any) => {
-    if (editingCategory) {
-      await api.put(`/categories/${editingCategory.id}`, data);
-    } else {
-      await api.post('/categories', data);
+    try {
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, data);
+      } else {
+        await createCategory(data);
+      }
+      setIsModalOpen(false);
+    } catch (err: any) {
+      alert(err.message || 'Erro ao salvar categoria.');
     }
-    fetchCategories();
   };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Excluir esta categoria? Os lançamentos vinculados passarão a ficar sem categoria.')) {
       try {
-        await api.delete(`/categories/${id}`);
-        fetchCategories();
+        await deleteCategory(id);
       } catch (err: any) {
         alert(err.message || 'Erro ao excluir categoria.');
       }

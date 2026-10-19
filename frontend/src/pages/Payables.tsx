@@ -13,10 +13,12 @@ import { api } from '../services/api';
 import { Category, Transaction } from '../types';
 import { formatCurrency, formatDate, getStatusDetails } from '../utils/formatters';
 import { TransactionModal } from '../components/TransactionModal';
+import { useCategories } from '../contexts/CategoriesContext';
+import { useDataSync } from '../hooks/useDataSync';
 
 export const Payables: React.FC = () => {
   const [payables, setPayables] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { categories } = useCategories();
   const [isLoading, setIsLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<'all' | 'PENDENTE' | 'VENCIDO' | 'PAGO'>('all');
   const [search, setSearch] = useState('');
@@ -36,19 +38,14 @@ export const Payables: React.FC = () => {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const res = await api.get<{ categories: Category[] }>('/categories');
-      setCategories(res.categories);
-    } catch (err) {
-      console.error('Erro ao buscar categorias:', err);
-    }
-  };
-
   useEffect(() => {
     fetchPayables();
-    fetchCategories();
   }, []);
+
+  // Reactively re-fetch payables when transactions change anywhere
+  useDataSync(['transactions', 'all'], () => {
+    fetchPayables();
+  });
 
   const handleMarkAsPaid = async (item: Transaction) => {
     try {

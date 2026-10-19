@@ -12,7 +12,9 @@ export const Login: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [forgotStep, setForgotStep] = useState<1 | 2>(1);
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [resetAuthorizationToken, setResetAuthorizationToken] = useState('');
+  const [forgotStep, setForgotStep] = useState<1 | 2 | 3>(1);
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -26,7 +28,7 @@ export const Login: React.FC = () => {
     setError('');
     setIsLoading(true);
     try {
-      await login(email.trim(), password);
+      await login(email.trim().toLowerCase(), password);
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Falha ao realizar login.');
@@ -51,7 +53,7 @@ export const Login: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await register(name.trim(), email.trim(), password);
+      await register(name.trim(), email.trim().toLowerCase(), password);
       navigate('/');
     } catch (err: any) {
       setError(err.message || 'Falha ao criar conta.');
@@ -63,13 +65,44 @@ export const Login: React.FC = () => {
   const handleForgotRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
     setIsLoading(true);
     try {
-      const res = await api.post<{ message: string; resetToken?: string }>('/auth/forgot-password', { email: email.trim() });
-      setSuccess(`Código de recuperação: ${res.resetToken || 'Enviado por e-mail'}`);
+      await api.post<{ message: string }>('/auth/forgot-password', {
+        email: email.trim().toLowerCase(),
+      });
+      setSuccess('Instruções enviadas! Se o endereço informado estiver cadastrado, o código de 6 dígitos foi enviado para o seu e-mail. Verifique a caixa de entrada e o spam.');
       setForgotStep(2);
+      setResetCode('');
     } catch (err: any) {
-      setError(err.message || 'Erro ao solicitar recuperação.');
+      setError(err.message || 'Erro ao solicitar código de recuperação.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    const trimmedCode = resetCode.trim();
+    if (!/^\d{6}$/.test(trimmedCode)) {
+      setError('O código de verificação deve conter exatamente 6 dígitos numéricos.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const res = await api.post<{ message: string; resetAuthorizationToken: string }>('/auth/verify-reset-code', {
+        email: email.trim().toLowerCase(),
+        code: trimmedCode,
+      });
+      setResetAuthorizationToken(res.resetAuthorizationToken);
+      setSuccess('Código verificado com sucesso! Agora cadastre sua nova senha.');
+      setForgotStep(3);
+    } catch (err: any) {
+      setError(err.message || 'Código de recuperação inválido ou expirado.');
     } finally {
       setIsLoading(false);
     }
@@ -78,18 +111,36 @@ export const Login: React.FC = () => {
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
+
+    if (newPassword.length < 6) {
+      setError('A nova senha deve ter no mínimo 6 caracteres.');
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setError('A nova senha e a confirmação de senha não coincidem.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await api.post('/auth/reset-password', {
-        email: email.trim(),
-        resetToken: resetCode.trim(),
+      await api.post<{ message: string }>('/auth/reset-password', {
+        email: email.trim().toLowerCase(),
+        resetAuthorizationToken,
         newPassword,
+        confirmPassword: confirmNewPassword,
       });
-      setSuccess('Senha redefinida com sucesso! Você já pode entrar.');
+      setSuccess('Senha redefinida com sucesso! Você já pode entrar com sua nova senha.');
       setTab('login');
       setForgotStep(1);
+      setResetCode('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setResetAuthorizationToken('');
+      setPassword('');
     } catch (err: any) {
-      setError(err.message || 'Código inválido ou expirado.');
+      setError(err.message || 'Erro ao redefinir senha. A autorização pode ter expirado.');
     } finally {
       setIsLoading(false);
     }
@@ -288,27 +339,46 @@ export const Login: React.FC = () => {
           {/* FORGOT PASSWORD FORM */}
           {tab === 'forgot' && (
             <div>
-              <div className="flex items-center space-x-2 mb-4">
+              <div className="flex items-center justify-between mb-4">
                 <button
                   type="button"
-                  onClick={() => setTab('login')}
+                  onClick={() => {
+                    setTab('login');
+                    setError('');
+                    setSuccess('');
+                    setForgotStep(1);
+                  }}
                   className="text-xs text-sky-600 hover:underline font-semibold"
                 >
                   ← Voltar para o Login
                 </button>
+
+                {/* Step indicator */}
+                <div className="flex items-center space-x-1.5 text-[11px] font-bold text-slate-400">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center ${forgotStep === 1 ? 'bg-sky-600 text-white' : forgotStep > 1 ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'}`}>1</span>
+                  <span>—</span>
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center ${forgotStep === 2 ? 'bg-sky-600 text-white' : forgotStep > 2 ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'}`}>2</span>
+                  <span>—</span>
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center ${forgotStep === 3 ? 'bg-sky-600 text-white' : 'bg-slate-200 text-slate-500'}`}>3</span>
+                </div>
               </div>
 
-              <h3 className="text-base font-bold text-slate-800 mb-1">Recuperação de Senha</h3>
+              <h3 className="text-base font-bold text-slate-800 mb-1">
+                {forgotStep === 1 && 'Recuperação de Acesso'}
+                {forgotStep === 2 && 'Validação do Código'}
+                {forgotStep === 3 && 'Definição da Nova Senha'}
+              </h3>
               <p className="text-xs text-slate-500 mb-4">
-                {forgotStep === 1
-                  ? 'Informe seu e-mail cadastrado para gerar o código de recuperação.'
-                  : 'Informe o código recebido e defina sua nova senha.'}
+                {forgotStep === 1 && 'Informe seu e-mail cadastrado. Um código de segurança será despachado para a sua caixa de entrada.'}
+                {forgotStep === 2 && 'Digite o código de 6 dígitos recebido por e-mail para validar sua solicitação.'}
+                {forgotStep === 3 && 'Crie uma nova senha de no mínimo 6 caracteres para concluir a recuperação.'}
               </p>
 
-              {forgotStep === 1 ? (
+              {/* Step 1: Request code */}
+              {forgotStep === 1 && (
                 <form onSubmit={handleForgotRequest} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Seu E-mail</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Seu E-mail Cadastrado</label>
                     <div className="relative">
                       <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
                       <input
@@ -325,13 +395,16 @@ export const Login: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition shadow-md shadow-sky-600/20"
+                    className="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition shadow-md shadow-sky-600/20 disabled:opacity-50"
                   >
-                    {isLoading ? 'Enviando...' : 'Gerar Código de Recuperação'}
+                    {isLoading ? 'Enviando instruções...' : 'Enviar Código por E-mail'}
                   </button>
                 </form>
-              ) : (
-                <form onSubmit={handleResetPassword} className="space-y-4">
+              )}
+
+              {/* Step 2: Validate 6-digit code */}
+              {forgotStep === 2 && (
+                <form onSubmit={handleVerifyCode} className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Código de 6 Dígitos</label>
                     <div className="relative">
@@ -339,14 +412,43 @@ export const Login: React.FC = () => {
                       <input
                         type="text"
                         required
+                        maxLength={6}
+                        pattern="\d{6}"
                         value={resetCode}
-                        onChange={e => setResetCode(e.target.value)}
-                        placeholder="Ex: 123456"
-                        className="w-full pl-10 pr-3 py-2.5 text-sm font-mono border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                        onChange={e => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        placeholder="000000"
+                        className="w-full pl-10 pr-3 py-2.5 text-base tracking-[0.3em] font-mono font-bold text-center border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none"
                       />
                     </div>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      O código é válido por 10 minutos e foi enviado exclusivamente ao seu e-mail.
+                    </p>
                   </div>
 
+                  <button
+                    type="submit"
+                    disabled={isLoading || resetCode.trim().length !== 6}
+                    className="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl transition shadow-md shadow-sky-600/20 disabled:opacity-50"
+                  >
+                    {isLoading ? 'Verificando código...' : 'Validar Código'}
+                  </button>
+
+                  <div className="text-center pt-1">
+                    <button
+                      type="button"
+                      disabled={isLoading}
+                      onClick={handleForgotRequest}
+                      className="text-xs text-sky-600 hover:underline font-semibold"
+                    >
+                      Não recebeu? Reenviar código
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Step 3: Set new password */}
+              {forgotStep === 3 && (
+                <form onSubmit={handleResetPassword} className="space-y-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Nova Senha</label>
                     <div className="relative">
@@ -354,9 +456,26 @@ export const Login: React.FC = () => {
                       <input
                         type="password"
                         required
+                        minLength={6}
                         value={newPassword}
                         onChange={e => setNewPassword(e.target.value)}
-                        placeholder="••••••••"
+                        placeholder="Mínimo 6 caracteres"
+                        className="w-full pl-10 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Confirmar Nova Senha</label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+                      <input
+                        type="password"
+                        required
+                        minLength={6}
+                        value={confirmNewPassword}
+                        onChange={e => setConfirmNewPassword(e.target.value)}
+                        placeholder="Repita a nova senha"
                         className="w-full pl-10 pr-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500 focus:outline-none"
                       />
                     </div>
@@ -365,9 +484,9 @@ export const Login: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-md shadow-emerald-600/20"
+                    className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition shadow-md shadow-emerald-600/20 disabled:opacity-50"
                   >
-                    {isLoading ? 'Redefinindo...' : 'Salvar Nova Senha'}
+                    {isLoading ? 'Salvando nova senha...' : 'Confirmar e Salvar Nova Senha'}
                   </button>
                 </form>
               )}

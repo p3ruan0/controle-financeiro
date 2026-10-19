@@ -15,6 +15,7 @@ import {
 import { api } from '../../services/api';
 import { AuditLogItem } from '../../types';
 import { formatDateTime } from '../../utils/formatters';
+import { useDataSync } from '../../hooks/useDataSync';
 
 export const AdminAuditLogs: React.FC = () => {
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
@@ -43,6 +44,11 @@ export const AdminAuditLogs: React.FC = () => {
   useEffect(() => {
     fetchLogs();
   }, [actionFilter]);
+
+  // Reactively re-fetch audit logs when admin actions occur
+  useDataSync(['admin-audit-logs', 'all'], () => {
+    fetchLogs();
+  });
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

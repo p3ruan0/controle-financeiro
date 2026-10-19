@@ -18,6 +18,7 @@ import {
 import { api } from '../../services/api';
 import { AdminDashboardData } from '../../types';
 import { formatDateTime, formatRelativeTime, getRoleBadge } from '../../utils/formatters';
+import { useDataSync } from '../../hooks/useDataSync';
 
 export const AdminDashboard: React.FC = () => {
   const [data, setData] = useState<AdminDashboardData | null>(null);
@@ -39,6 +40,11 @@ export const AdminDashboard: React.FC = () => {
   useEffect(() => {
     fetchDashboard();
   }, []);
+
+  // Reactively re-fetch admin dashboard when users, companies or sessions change
+  useDataSync(['admin-dashboard', 'all'], () => {
+    fetchDashboard();
+  });
 
   const handleRefresh = () => {
     setRefreshing(true);

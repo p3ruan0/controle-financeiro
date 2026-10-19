@@ -14,10 +14,12 @@ import { api } from '../services/api';
 import { Category, Transaction } from '../types';
 import { formatCurrency, formatDate, getPaymentMethodName, getStatusDetails } from '../utils/formatters';
 import { TransactionModal } from '../components/TransactionModal';
+import { useCategories } from '../contexts/CategoriesContext';
+import { useDataSync } from '../hooks/useDataSync';
 
 export const VariableExpenses: React.FC = () => {
   const [expenses, setExpenses] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { categories } = useCategories();
   const [isLoading, setIsLoading] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -35,19 +37,14 @@ export const VariableExpenses: React.FC = () => {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const res = await api.get<{ categories: Category[] }>('/categories');
-      setCategories(res.categories);
-    } catch (err) {
-      console.error('Erro ao carregar categorias:', err);
-    }
-  };
-
   useEffect(() => {
     fetchVariableExpenses();
-    fetchCategories();
   }, []);
+
+  // Reactively re-fetch variable expenses when transactions change anywhere
+  useDataSync(['transactions', 'all'], () => {
+    fetchVariableExpenses();
+  });
 
   const handleSaveExpense = async (data: any) => {
     if (editingExpense) {

@@ -6,6 +6,7 @@ import {
   getMe,
   updateProfile,
   forgotPassword,
+  verifyResetCode,
   resetPassword,
   acceptInvitation,
 } from '../controllers/authController';
@@ -84,6 +85,7 @@ router.post('/auth/login', login);
 router.get('/auth/me', authenticate, getMe);
 router.put('/auth/profile', authenticate, updateProfile);
 router.post('/auth/forgot-password', forgotPassword);
+router.post('/auth/verify-reset-code', verifyResetCode);
 router.post('/auth/reset-password', resetPassword);
 router.post('/auth/accept-invitation', acceptInvitation);
 

@@ -25,6 +25,7 @@ import { User, Company, UserRole, UserStatus } from '../../types';
 import { formatDateTime, formatRelativeTime, getRoleBadge, getUserStatusBadge } from '../../utils/formatters';
 import { AdminUserDetailModal } from './AdminUserDetailModal';
 import { useAuth } from '../../contexts/AuthContext';
+import { useDataSync } from '../../hooks/useDataSync';
 
 export const AdminUsers: React.FC = () => {
   const { user: currentUser } = useAuth();
@@ -100,6 +101,11 @@ export const AdminUsers: React.FC = () => {
   useEffect(() => {
     fetchUsers();
   }, [statusFilter, roleFilter, companyFilter, lastAccessFilter]);
+
+  // Reactively re-fetch users when admin user or company data mutates
+  useDataSync(['admin-users', 'admin-companies', 'all'], () => {
+    fetchUsers();
+  });
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

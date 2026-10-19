@@ -31,9 +31,9 @@ import {
   Filler,
 } from 'chart.js';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
-import { api } from '../services/api';
 import { DashboardData } from '../types';
 import { formatCurrency } from '../utils/formatters';
+import { useDashboardData } from '../hooks/useDashboardData';
 
 ChartJS.register(
   CategoryScale,
@@ -53,34 +53,18 @@ interface DashboardProps {
   refreshTrigger?: number;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ onOpenQuickModal, refreshTrigger }) => {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+const monthNames = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+export const Dashboard: React.FC<DashboardProps> = ({ onOpenQuickModal }) => {
   const [selectedDate, setSelectedDate] = useState(new Date());
 
   const currentMonth = selectedDate.getMonth() + 1;
   const currentYear = selectedDate.getFullYear();
 
-  const monthNames = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
-  ];
-
-  const fetchDashboard = async () => {
-    try {
-      setIsLoading(true);
-      const res = await api.get<DashboardData>(`/dashboard?month=${currentMonth}&year=${currentYear}`);
-      setData(res);
-    } catch (error) {
-      console.error('Erro ao carregar dashboard:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDashboard();
-  }, [currentMonth, currentYear, refreshTrigger]);
+  const { data, isLoading } = useDashboardData(currentMonth, currentYear);
 
   const handlePrevMonth = () => {
     setSelectedDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));

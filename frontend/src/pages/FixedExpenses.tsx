@@ -12,11 +12,13 @@ import { api } from '../services/api';
 import { Category, RecurringExpense } from '../types';
 import { formatCurrency, getPaymentMethodName } from '../utils/formatters';
 import { FixedExpenseModal } from '../components/FixedExpenseModal';
+import { useCategories } from '../contexts/CategoriesContext';
+import { useDataSync } from '../hooks/useDataSync';
 
 export const FixedExpenses: React.FC = () => {
   const [fixedExpenses, setFixedExpenses] = useState<RecurringExpense[]>([]);
   const [totalMonthly, setTotalMonthly] = useState(0);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { categories } = useCategories();
   const [isLoading, setIsLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationMessage, setGenerationMessage] = useState('');
@@ -40,19 +42,14 @@ export const FixedExpenses: React.FC = () => {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const res = await api.get<{ categories: Category[] }>('/categories');
-      setCategories(res.categories);
-    } catch (err) {
-      console.error('Erro ao carregar categorias:', err);
-    }
-  };
-
   useEffect(() => {
     fetchFixedExpenses();
-    fetchCategories();
   }, []);
+
+  // Reactively re-fetch fixed expenses when fixed-expenses change anywhere
+  useDataSync(['fixed-expenses', 'all'], () => {
+    fetchFixedExpenses();
+  });
 
   const handleSaveExpense = async (data: any) => {
     if (editingExpense) {

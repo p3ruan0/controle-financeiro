@@ -14,10 +14,12 @@ import { api } from '../services/api';
 import { Category, Transaction, TransactionType } from '../types';
 import { formatCurrency, formatDate, getPaymentMethodName, getStatusDetails } from '../utils/formatters';
 import { TransactionModal } from '../components/TransactionModal';
+import { useCategories } from '../contexts/CategoriesContext';
+import { useDataSync } from '../hooks/useDataSync';
 
 export const Transactions: React.FC = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { categories } = useCategories();
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters state
@@ -35,15 +37,6 @@ export const Transactions: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [modalInitialType, setModalInitialType] = useState<TransactionType>('SAIDA');
-
-  const fetchCategories = async () => {
-    try {
-      const res = await api.get<{ categories: Category[] }>('/categories');
-      setCategories(res.categories);
-    } catch (err) {
-      console.error('Erro ao buscar categorias:', err);
-    }
-  };
 
   const fetchTransactions = async () => {
     try {
@@ -68,9 +61,10 @@ export const Transactions: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  // Reactively re-fetch transactions when any mutation occurs across the application
+  useDataSync(['transactions', 'all'], () => {
+    fetchTransactions();
+  });
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {

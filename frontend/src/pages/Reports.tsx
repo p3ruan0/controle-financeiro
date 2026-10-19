@@ -17,6 +17,7 @@ import { Doughnut, Bar } from 'react-chartjs-2';
 import { api } from '../services/api';
 import { FinancialReportData } from '../types';
 import { formatCurrency, formatDate } from '../utils/formatters';
+import { useDataSync } from '../hooks/useDataSync';
 
 export const Reports: React.FC = () => {
   const [period, setPeriod] = useState('este_mes');
@@ -46,6 +47,11 @@ export const Reports: React.FC = () => {
   useEffect(() => {
     fetchReport();
   }, [period]);
+
+  // Reactively re-fetch report when financial data changes
+  useDataSync(['reports', 'all'], () => {
+    fetchReport();
+  });
 
   const handleExport = async (format: 'excel' | 'csv' | 'pdf') => {
     try {

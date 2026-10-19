@@ -19,6 +19,7 @@ import {
 import { api } from '../../services/api';
 import { Company, User } from '../../types';
 import { formatDateTime, formatRelativeTime, getUserStatusBadge } from '../../utils/formatters';
+import { useDataSync } from '../../hooks/useDataSync';
 
 export const AdminCompanies: React.FC = () => {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -76,6 +77,11 @@ export const AdminCompanies: React.FC = () => {
   useEffect(() => {
     fetchCompanies();
   }, [statusFilter]);
+
+  // Reactively re-fetch companies when admin data mutates
+  useDataSync(['admin-companies', 'all'], () => {
+    fetchCompanies();
+  });
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

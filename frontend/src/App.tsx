@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { CategoriesProvider, useCategories } from './contexts/CategoriesContext';
+import { useAlertsData } from './hooks/useAlertsData';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { NotificationModal } from './components/NotificationModal';
@@ -28,9 +30,7 @@ import { AdminSessions } from './pages/admin/AdminSessions';
 import { AdminInvitations } from './pages/admin/AdminInvitations';
 
 import { api } from './services/api';
-import { Category, DashboardAlert } from './types';
 import { ShieldAlert } from 'lucide-react';
-
 
 const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -57,38 +57,15 @@ const AppLayout: React.FC = () => {
   const { isAuthenticated, isLoading } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Live real-time single source of truth for alerts and categories
+  const { alerts } = useAlertsData();
+  const { categories } = useCategories();
+
   // Modals state
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const [alerts, setAlerts] = useState<DashboardAlert[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-
-  // Quick action modals
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false);
   const [transactionModalType, setTransactionModalType] = useState<'ENTRADA' | 'SAIDA'>('ENTRADA');
   const [isReceivableModalOpen, setIsReceivableModalOpen] = useState(false);
-
-  // Trigger to refresh dashboard when a quick action is saved
-  const [refreshCount, setRefreshCount] = useState(0);
-
-  const fetchAppData = async () => {
-    if (!isAuthenticated) return;
-    try {
-      const [dashRes, catRes] = await Promise.all([
-        api.get<any>('/dashboard'),
-        api.get<{ categories: Category[] }>('/categories'),
-      ]);
-      if (dashRes.alerts) setAlerts(dashRes.alerts);
-      if (catRes.categories) setCategories(catRes.categories);
-    } catch (err) {
-      console.error('Erro ao carregar dados do app:', err);
-    }
-  };
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchAppData();
-    }
-  }, [isAuthenticated, refreshCount]);
 
   if (isLoading) {
     return (
@@ -116,12 +93,10 @@ const AppLayout: React.FC = () => {
 
   const handleSaveQuickTransaction = async (data: any) => {
     await api.post('/transactions', data);
-    setRefreshCount(prev => prev + 1);
   };
 
   const handleSaveQuickReceivable = async (data: any) => {
     await api.post('/receivables', data);
-    setRefreshCount(prev => prev + 1);
   };
 
   return (
@@ -142,7 +117,7 @@ const AppLayout: React.FC = () => {
         {/* Page Content */}
         <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">
           <Routes>
-            <Route path="/" element={<Dashboard onOpenQuickModal={handleOpenQuickModal} refreshTrigger={refreshCount} />} />
+            <Route path="/" element={<Dashboard onOpenQuickModal={handleOpenQuickModal} />} />
             <Route path="/lancamentos" element={<Transactions />} />
             <Route path="/contas-a-pagar" element={<Payables />} />
             <Route path="/contas-a-receber" element={<Receivables />} />
@@ -237,15 +212,16 @@ export const App: React.FC = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/convite/:token" element={<AcceptInvitation />} />
-          <Route path="/*" element={<AppLayout />} />
-        </Routes>
+        <CategoriesProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/convite/:token" element={<AcceptInvitation />} />
+            <Route path="/*" element={<AppLayout />} />
+          </Routes>
+        </CategoriesProvider>
       </AuthProvider>
     </BrowserRouter>
   );
 };
 
 export default App;
-

@@ -14,10 +14,12 @@ import { api } from '../services/api';
 import { Category, ReceivableAccount } from '../types';
 import { formatCurrency, formatDate, getStatusDetails } from '../utils/formatters';
 import { ReceivableModal } from '../components/ReceivableModal';
+import { useCategories } from '../contexts/CategoriesContext';
+import { useDataSync } from '../hooks/useDataSync';
 
 export const Receivables: React.FC = () => {
   const [receivables, setReceivables] = useState<ReceivableAccount[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const { categories } = useCategories();
   const [isLoading, setIsLoading] = useState(true);
   const [summary, setSummary] = useState({
     totalAReceber: 0,
@@ -53,18 +55,10 @@ export const Receivables: React.FC = () => {
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const res = await api.get<{ categories: Category[] }>('/categories');
-      setCategories(res.categories);
-    } catch (err) {
-      console.error('Erro ao buscar categorias:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  // Reactively re-fetch receivables when receivables change anywhere
+  useDataSync(['receivables', 'all'], () => {
+    fetchReceivables();
+  });
 
   useEffect(() => {
     fetchReceivables();

@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save, Repeat } from 'lucide-react';
 import { Category, RecurringExpense } from '../types';
+import { useCategories } from '../contexts/CategoriesContext';
 
 interface FixedExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: any) => Promise<void>;
   fixedExpense?: RecurringExpense | null;
-  categories: Category[];
+  categories?: Category[];
 }
 
 export const FixedExpenseModal: React.FC<FixedExpenseModalProps> = ({
@@ -15,8 +16,10 @@ export const FixedExpenseModal: React.FC<FixedExpenseModalProps> = ({
   onClose,
   onSave,
   fixedExpense,
-  categories,
+  categories: propCategories,
 }) => {
+  const { categories: contextCategories } = useCategories();
+  const categories = propCategories && propCategories.length > 0 ? propCategories : contextCategories;
   const [name, setName] = useState('');
   const [amount, setAmount] = useState('');
   const [dueDay, setDueDay] = useState(10);

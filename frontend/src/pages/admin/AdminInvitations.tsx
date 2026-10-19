@@ -14,6 +14,7 @@ import {
 import { api } from '../../services/api';
 import { InvitationItem } from '../../types';
 import { formatDateTime, formatRelativeTime, getRoleBadge } from '../../utils/formatters';
+import { useDataSync } from '../../hooks/useDataSync';
 
 export const AdminInvitations: React.FC = () => {
   const [invitations, setInvitations] = useState<InvitationItem[]>([]);
@@ -35,6 +36,11 @@ export const AdminInvitations: React.FC = () => {
   useEffect(() => {
     fetchInvitations();
   }, []);
+
+  // Reactively re-fetch invitations when invitation data changes
+  useDataSync(['admin-invitations', 'all'], () => {
+    fetchInvitations();
+  });
 
   const handleCopyLink = (invitation: InvitationItem) => {
     const inviteUrl = `${window.location.origin}/convite/${invitation.token}`;

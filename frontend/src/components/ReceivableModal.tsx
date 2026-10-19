@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { X, Save, ArrowUpRight } from 'lucide-react';
 import { Category, ReceivableAccount } from '../types';
 import { formatInputDate } from '../utils/formatters';
+import { useCategories } from '../contexts/CategoriesContext';
 
 interface ReceivableModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: any) => Promise<void>;
   receivable?: ReceivableAccount | null;
-  categories: Category[];
+  categories?: Category[];
 }
 
 export const ReceivableModal: React.FC<ReceivableModalProps> = ({
@@ -16,8 +17,10 @@ export const ReceivableModal: React.FC<ReceivableModalProps> = ({
   onClose,
   onSave,
   receivable,
-  categories,
+  categories: propCategories,
 }) => {
+  const { categories: contextCategories } = useCategories();
+  const categories = propCategories && propCategories.length > 0 ? propCategories : contextCategories;
   const [debtorName, setDebtorName] = useState('');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');

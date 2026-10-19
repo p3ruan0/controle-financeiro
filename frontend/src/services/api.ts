@@ -1,4 +1,33 @@
+import { dataSync } from './dataSync';
+
 const BASE_URL = '/api';
+
+function triggerAutoSync(endpoint: string, method?: string) {
+  const m = (method || 'GET').toUpperCase();
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(m)) {
+    if (endpoint.startsWith('/transactions')) {
+      dataSync.emit('transactions');
+    } else if (endpoint.startsWith('/categories')) {
+      dataSync.emit('categories');
+    } else if (endpoint.startsWith('/receivables')) {
+      dataSync.emit('receivables');
+    } else if (endpoint.startsWith('/fixed-expenses')) {
+      dataSync.emit('fixed-expenses');
+    } else if (endpoint.startsWith('/demo')) {
+      dataSync.emit('all');
+    } else if (endpoint.startsWith('/auth/profile')) {
+      dataSync.emit('user-profile');
+    } else if (endpoint.startsWith('/admin/users')) {
+      dataSync.emit('admin-users');
+    } else if (endpoint.startsWith('/admin/companies')) {
+      dataSync.emit('admin-companies');
+    } else if (endpoint.startsWith('/admin/sessions')) {
+      dataSync.emit('admin-sessions');
+    } else if (endpoint.startsWith('/admin/invitations')) {
+      dataSync.emit('admin-invitations');
+    }
+  }
+}
 
 class ApiService {
   private getToken(): string | null {
@@ -21,7 +50,15 @@ class ApiService {
       headers,
     });
 
-    if (response.status === 401) {
+    const isPublicAuthEndpoint =
+      endpoint.startsWith('/auth/login') ||
+      endpoint.startsWith('/auth/register') ||
+      endpoint.startsWith('/auth/forgot-password') ||
+      endpoint.startsWith('/auth/verify-reset-code') ||
+      endpoint.startsWith('/auth/reset-password') ||
+      endpoint.startsWith('/auth/accept-invitation');
+
+    if (response.status === 401 && !isPublicAuthEndpoint) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       if (window.location.pathname !== '/login') {
@@ -35,6 +72,9 @@ class ApiService {
     if (!response.ok) {
       throw new Error(data.error || 'Ocorreu um erro ao processar a requisição.');
     }
+
+    // Trigger reactive synchronization on successful state mutations
+    triggerAutoSync(endpoint, options.method);
 
     return data as T;
   }

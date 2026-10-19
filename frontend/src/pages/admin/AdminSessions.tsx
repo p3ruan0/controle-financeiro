@@ -13,6 +13,7 @@ import {
 import { api } from '../../services/api';
 import { UserSession } from '../../types';
 import { formatDateTime, formatRelativeTime, getRoleBadge } from '../../utils/formatters';
+import { useDataSync } from '../../hooks/useDataSync';
 
 export const AdminSessions: React.FC = () => {
   const [sessions, setSessions] = useState<UserSession[]>([]);
@@ -34,6 +35,11 @@ export const AdminSessions: React.FC = () => {
   useEffect(() => {
     fetchSessions();
   }, []);
+
+  // Reactively re-fetch sessions when sessions change
+  useDataSync(['admin-sessions', 'all'], () => {
+    fetchSessions();
+  });
 
   const handleTerminateSession = async (sessionId: string, userName: string) => {
     if (!confirm(`Deseja derrubar esta sessão de ${userName}? O usuário será desconectado imediatamente desse dispositivo.`)) {
