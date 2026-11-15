@@ -91,7 +91,7 @@ export const Settings: React.FC = () => {
         <p className="text-xs text-slate-500">Gerencie seu perfil, segurança e dados da conta</p>
       </div>
 
-      {demoMsg && (
+      {user?.role === 'SUPER_ADMIN' && demoMsg && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-semibold flex items-center space-x-2">
           <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
           <span>{demoMsg}</span>
@@ -197,7 +197,7 @@ export const Settings: React.FC = () => {
         </form>
       </div>
 
-      {/* DEMO DATA & RESET AREA */}
+      {user?.role === 'SUPER_ADMIN' && (
       <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200/80 space-y-4">
         <div>
           <h2 className="text-base font-bold text-slate-800 flex items-center gap-2 mb-1">
@@ -251,6 +251,7 @@ export const Settings: React.FC = () => {
           </div>
         </div>
       </div>
+      )}
 
       {/* System Security Info */}
       <div className="p-4 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-between text-xs text-slate-600">
