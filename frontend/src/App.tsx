@@ -21,6 +21,7 @@ import { Reports } from './pages/Reports';
 import { Categories } from './pages/Categories';
 import { Settings } from './pages/Settings';
 import { AcceptInvitation } from './pages/AcceptInvitation';
+import { LandingPage } from './pages/LandingPage';
 
 import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AdminUsers } from './pages/admin/AdminUsers';
@@ -50,6 +51,20 @@ const AdminRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     );
   }
   return <>{children}</>;
+};
+
+const RootRoute: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-500"></div>
+      </div>
+    );
+  }
+
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <LandingPage />;
 };
 
 // Layout wrapper for authenticated routes
@@ -117,7 +132,7 @@ const AppLayout: React.FC = () => {
         {/* Page Content */}
         <main className="flex-1 p-4 sm:p-6 md:p-8 max-w-7xl w-full mx-auto">
           <Routes>
-            <Route path="/" element={<Dashboard onOpenQuickModal={handleOpenQuickModal} />} />
+            <Route path="/dashboard" element={<Dashboard onOpenQuickModal={handleOpenQuickModal} />} />
             <Route path="/lancamentos" element={<Transactions />} />
             <Route path="/contas-a-pagar" element={<Payables />} />
             <Route path="/contas-a-receber" element={<Receivables />} />
@@ -214,6 +229,7 @@ export const App: React.FC = () => {
       <AuthProvider>
         <CategoriesProvider>
           <Routes>
+            <Route path="/" element={<RootRoute />} />
             <Route path="/login" element={<Login />} />
             <Route path="/convite/:token" element={<AcceptInvitation />} />
             <Route path="/*" element={<AppLayout />} />
