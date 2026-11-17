@@ -19,7 +19,6 @@ export const Footer: React.FC = () => (
           </span>
           <span className="text-lg font-extrabold tracking-tight text-slate-900">nemmus</span>
         </a>
-        <p className="mt-2 text-sm text-slate-500">Mais clareza para cuidar do seu dinheiro.</p>
       </div>
       <nav className="flex flex-wrap gap-x-6 gap-y-3" aria-label="Links do rodapé">
         {footerLinks.map(link => (

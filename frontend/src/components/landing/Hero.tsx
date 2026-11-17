@@ -26,10 +26,6 @@ export const Hero: React.FC = () => (
     <div className="absolute -right-32 -top-32 -z-10 h-96 w-96 rounded-full bg-sky-100 blur-3xl" />
     <div className="mx-auto grid max-w-7xl items-center gap-14 px-5 py-16 sm:px-8 sm:py-24 lg:grid-cols-2 lg:gap-16 lg:py-28">
       <div>
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-sky-100 bg-white px-3.5 py-2 text-xs font-semibold text-sky-800 shadow-sm">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
-          Mais clareza para cuidar do seu dinheiro
-        </div>
         <h1 className="max-w-2xl text-4xl font-extrabold leading-tight tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
           Suas finanças em ordem.{' '}
           <span className="text-sky-600">Suas escolhas, mais leves.</span>
